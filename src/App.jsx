@@ -2,6 +2,7 @@ import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
+
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
@@ -18,14 +19,16 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div style={{ padding: 16 }}>Loading...</div>;
 
   return (
     <div style={{ maxWidth: 980, margin: "0 auto", padding: 16 }}>
       <header style={{ display: "flex", justifyContent: "space-between" }}>
         <div>
+          {/* ✅ link tương đối để chạy đúng với basename */}
           <Link to="">Trang bán</Link> | <Link to="admin">Admin</Link>
         </div>
+
         {user ? (
           <button onClick={() => signOut(auth)}>Đăng xuất</button>
         ) : (
@@ -36,15 +39,18 @@ export default function App() {
       <hr />
 
       <Routes>
-        {/* ✅ TRANG MẶC ĐỊNH */}
+        {/* ✅ vào web là render Home ngay */}
         <Route index element={<Home />} />
 
         <Route path="login" element={<Login />} />
 
         <Route
           path="admin"
-          element={user ? <Admin /> : <Navigate to="/login" />}
+          element={user ? <Admin /> : <Navigate to="/login" replace />}
         />
+
+        {/* ✅ route sai quay về trang bán */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

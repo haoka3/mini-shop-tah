@@ -6,7 +6,7 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {/* ✅ repo name = mini-shop-tah */}
+    {/* GitHub Pages chạy dưới /mini-shop-tah */}
     <BrowserRouter basename="/mini-shop-tah">
       <App />
     </BrowserRouter>
