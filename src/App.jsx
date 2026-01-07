@@ -24,15 +24,27 @@ export default function App() {
     <div style={{ maxWidth: 980, margin: "0 auto", padding: 16 }}>
       <header style={{ display: "flex", justifyContent: "space-between" }}>
         <div>
-          <Link to="/">Trang bán</Link> | <Link to="/admin">Admin</Link>
+          <Link to="">Trang bán</Link> | <Link to="admin">Admin</Link>
         </div>
-        {user ? <button onClick={() => signOut(auth)}>Đăng xuất</button> : <Link to="/login">Đăng nhập</Link>}
+        {user ? (
+          <button onClick={() => signOut(auth)}>Đăng xuất</button>
+        ) : (
+          <Link to="login">Đăng nhập</Link>
+        )}
       </header>
+
       <hr />
+
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={user ? <Admin /> : <Navigate to="/login" />} />
+        {/* ✅ TRANG MẶC ĐỊNH */}
+        <Route index element={<Home />} />
+
+        <Route path="login" element={<Login />} />
+
+        <Route
+          path="admin"
+          element={user ? <Admin /> : <Navigate to="/login" />}
+        />
       </Routes>
     </div>
   );
