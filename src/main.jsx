@@ -6,7 +6,8 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
+    {/* ✅ repo name = mini-shop-tah */}
+    <BrowserRouter basename="/mini-shop-tah">
       <App />
     </BrowserRouter>
   </React.StrictMode>
