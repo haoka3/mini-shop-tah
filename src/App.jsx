@@ -6,6 +6,7 @@ import { auth } from "./firebase";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
+import ChatBubble from "./components/ChatBubble";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -52,6 +53,8 @@ export default function App() {
         {/* ✅ route sai quay về trang bán */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      <ChatBubble />
     </div>
   );
 }

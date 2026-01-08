@@ -4,6 +4,9 @@ import { collection, onSnapshot, addDoc, serverTimestamp } from "firebase/firest
 
 export default function Home() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("none"); // none | price-asc | price-desc
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [info, setInfo] = useState({ name: "", phone: "", address: "" });
@@ -12,6 +15,16 @@ export default function Home() {
   useEffect(() => {
     return onSnapshot(collection(db, "products"), (s) =>
       setProducts(s.docs.map((d) => ({ id: d.id, ...d.data() })))
+    );
+  }, []);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, "categories"), (s) =>
+      setCategories(
+        s.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+      )
     );
   }, []);
 
@@ -85,6 +98,54 @@ export default function Home() {
     }
   };
 
+  const normalizeText = (text) =>
+    (text || "")
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+  const filteredProducts = (() => {
+    const term = normalizeText(search);
+    let result = products.filter((p) => {
+      if (!term) return true;
+      const name = normalizeText(p.name);
+      const priceString = (p.price || 0).toString();
+      return name.includes(term) || priceString.includes(term);
+    });
+
+    if (sortBy === "price-asc") {
+      result = [...result].sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === "price-desc") {
+      result = [...result].sort((a, b) => (b.price || 0) - (a.price || 0));
+    }
+    return result;
+  })();
+
+  const productsByCategory = (() => {
+    const catList = categories.length
+      ? categories
+      : [{ id: "other", name: "Khác", order: 999 }];
+
+    // Gom sản phẩm không có categoryId vào danh mục "Khác"
+    const categorized = catList.map((cat) => ({
+      ...cat,
+      items: filteredProducts.filter((p) =>
+        cat.id === "other"
+          ? !p.categoryId
+          : p.categoryId === cat.id
+      ),
+    }));
+
+    // Nếu vẫn còn sản phẩm không match (do categories rỗng), thêm fallback
+    const remaining = filteredProducts.filter((p) => !p.categoryId);
+    const hasOther = categorized.some((c) => c.id === "other");
+    if (remaining.length && !hasOther) {
+      categorized.push({ id: "other", name: "Khác", order: 999, items: remaining });
+    }
+    return categorized;
+  })();
+
   const styles = {
     container: {
       maxWidth: 1200,
@@ -99,6 +160,46 @@ export default function Home() {
       marginBottom: 30,
       flexWrap: "wrap",
       gap: 15,
+    },
+    filterBar: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 10,
+      marginBottom: 20,
+    },
+    searchInput: {
+      flex: 1,
+      minWidth: 220,
+      padding: "10px 12px",
+      borderRadius: 8,
+      border: "1px solid #d1d5db",
+      fontSize: "1rem",
+      boxSizing: "border-box",
+    },
+    select: {
+      minWidth: 180,
+      padding: "10px 12px",
+      borderRadius: 8,
+      border: "1px solid #d1d5db",
+      fontSize: "1rem",
+      boxSizing: "border-box",
+    },
+    categoryBlock: {
+      marginTop: 10,
+      marginBottom: 26,
+      display: "grid",
+      gap: 12,
+    },
+    categoryHeader: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    },
+    categoryTitle: {
+      fontSize: "1.3rem",
+      fontWeight: 800,
+      margin: 0,
+      color: "#111827",
     },
     title: {
       fontSize: "2rem",
@@ -137,8 +238,8 @@ export default function Home() {
     },
     productsGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-      gap: 20,
+      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+      gap: 14,
       marginBottom: 40,
     },
     productCard: {
@@ -361,39 +462,74 @@ export default function Home() {
         </button>
       </div>
 
-      {products.length === 0 ? (
+      <div style={styles.filterBar}>
+        <input
+          style={styles.searchInput}
+          placeholder="Tìm kiếm sản phẩm theo tên hoặc giá..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          style={styles.select}
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="none">Sắp xếp</option>
+          <option value="price-asc">Giá: Thấp → Cao</option>
+          <option value="price-desc">Giá: Cao → Thấp</option>
+        </select>
+        <div style={{ alignSelf: "center", color: "#6b7280", fontWeight: 600 }}>
+          {filteredProducts.length} sản phẩm
+        </div>
+      </div>
+
+      {categories.length === 0 ? (
         <div style={styles.emptyProducts}>
-          <p>Chưa có sản phẩm nào. Vui lòng quay lại sau!</p>
+          <p>Chưa có danh mục hoặc sản phẩm. Vui lòng quay lại sau!</p>
         </div>
       ) : (
-        <div style={styles.productsGrid}>
-          {products.map((product) => (
-            <div key={product.id} style={styles.productCard}>
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                style={styles.productImage}
-                onError={(e) => {
-                  e.target.src = "https://via.placeholder.com/250x200?text=No+Image";
-                }}
-              />
-              <div style={styles.productInfo}>
-                <h3 style={styles.productName}>{product.name}</h3>
-                <p style={styles.productPrice}>
-                  {product.price?.toLocaleString("vi-VN") || 0}đ
-                </p>
-                <button
-                  style={styles.addButton}
-                  onClick={() => addToCart(product)}
-                  onMouseOver={(e) => (e.target.style.backgroundColor = "#218838")}
-                  onMouseOut={(e) => (e.target.style.backgroundColor = "#28a745")}
-                >
-                  ➕ Thêm vào giỏ
-                </button>
-              </div>
+        productsByCategory.map((cat) => (
+          <div key={cat.id || cat.name} style={styles.categoryBlock}>
+            <div style={styles.categoryHeader}>
+              <h2 style={styles.categoryTitle}>{cat.name}</h2>
+              <span style={{ color: "#6b7280", fontWeight: 600 }}>
+                {cat.items.length} sản phẩm
+              </span>
             </div>
-          ))}
-        </div>
+            {cat.items.length === 0 ? (
+              <div style={{ color: "#9ca3af", fontStyle: "italic" }}>Chưa có sản phẩm.</div>
+            ) : (
+              <div style={styles.productsGrid}>
+                {cat.items.map((product) => (
+                  <div key={product.id} style={styles.productCard}>
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      style={styles.productImage}
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/250x200?text=No+Image";
+                      }}
+                    />
+                    <div style={styles.productInfo}>
+                      <h3 style={styles.productName}>{product.name}</h3>
+                      <p style={styles.productPrice}>
+                        {product.price?.toLocaleString("vi-VN") || 0}đ
+                      </p>
+                      <button
+                        style={styles.addButton}
+                        onClick={() => addToCart(product)}
+                        onMouseOver={(e) => (e.target.style.backgroundColor = "#218838")}
+                        onMouseOut={(e) => (e.target.style.backgroundColor = "#28a745")}
+                      >
+                        ➕ Thêm vào giỏ
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))
       )}
 
       {/* Overlay */}
